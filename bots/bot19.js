@@ -101,8 +101,7 @@ function ants(){ const s=S(); let k=0;
     const ripe=(()=>{let r=0;for(const g of S().gardens)for(const sl of g.slots)if(sl.leaf&&sl.growth>=1)r++;return r})();
     if(n.digger<1) kind='digger';
     else if(B.cfg.fLeaf && x.day<=B.cfg.fDay && x.leaves>=B.cfg.fLeaf && ripe<B.cfg.fRipe && n.farmer<B.cfg.fMax && done(3)>0){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
-    else if(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf)){ /* the queen farms herself while there are no farmers */ if(n.leafcutter<B.cfg.lc0 || n.leafcutter<B.cfg.lcEarly*(P-1)){ if(x.clay>=1) kind='leafcutter'; else kind='digger' } else kind='digger' }
-    else if(n.farmer<done(3)*B.cfg.farmersPer){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
+    else if(n.farmer<done(3)*B.cfg.farmersPer && !(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf))){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
     else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:B.cfg.lcShare)*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
     else if(n.digger<dWant) kind='digger';
     else kind='digger';
