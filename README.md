@@ -25,3 +25,4 @@ SEED=1488 N=1 node run.js
 
 - `bot15`: seed tree + Rich Food (best so far: 130 on seed 1488).
 - `bot17`: bot15 plus experimental options (feeders, Fungus Storage/Grower, sand Pheromones, farm placement).
+- `bot18`: bot17 plus seed-hunting Pheromones (`pheroN`) and Brown Clay Pits (`pits`).
