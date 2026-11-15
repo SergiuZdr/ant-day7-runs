@@ -12,6 +12,7 @@ const N = +(process.env.N || 4);
 const MODE = process.env.MODE || 'local';
 const KEEP = +(process.env.KEEP || 131);
 const OUT = process.env.OUT || 'out';
+const BRANCH = process.env.BRANCH || '';
 const URL = process.env.GAME_URL || 'https://antarchitectgame.com/play/';
 const BASE = Object.assign({ lcEarly: 0.7, lcShare: 0.25, dSwitch: 4, houseSlack: 3, farmPer: 5, maxPend: 2, hr: 8, tunLen: 6, digMax: 3, lc0: 2, farmersPer: 1 },
   JSON.parse(process.env.BASE || '{}'));
@@ -50,17 +51,28 @@ async function oneRun(browser, cfg, idx) {
     // rank: seeds we can reach for the feeder + clay pit path, tan clay for feeders
     const score = pr.seeds35 - pr.cFeederPit + Math.min(pr.tan35, 15) / 3;
     return { seed: SEED, bot: 'probe', best: +score.toFixed(1), cfg: {}, probe: pr } }
-  await p.evaluate(`(()=>{${botSrc}})()`);
-  await p.evaluate(c => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14() }, cfg);
-  let st;
-  for (let i = 0; i < 1200; i++) {
-    await sleep(3000);
-    const d = await p.evaluate(() => window.__B14.done || !!window.__B14.err);
-    if (d) break;
+  const waitDone = async () => { for (let i = 0; i < 1200; i++) { await sleep(3000); if (await p.evaluate(() => window.__B14.done || !!window.__B14.err)) break } };
+  if (BRANCH) {
+    // start from a saved replay at tick AT, play the variant cfg for one day, then the base cfg to the end
+    const [file, at] = BRANCH.split('@'); const AT = +at;
+    const txt = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    await p.evaluate(async ({ txt, AT }) => { const R = window.ants.replay; await R.import(txt); await new Promise(r => setTimeout(r, 1500)); await R.seek(AT); await new Promise(r => setTimeout(r, 1500)); await R.branch(); await new Promise(r => setTimeout(r, 1500)) }, { txt, AT });
+    for (let i = 0; i < 30; i++) { const t = await p.evaluate(() => window.__sim ? window.__sim.tick : -1); if (t >= AT - 200 && t <= AT + 200) break; await sleep(1000) }
+    const t = await p.evaluate(() => window.__sim.tick); if (Math.abs(t - AT) > 200) throw Error('branch landed at tick ' + t);
+    await p.evaluate(`(()=>{${botSrc}})()`);
+    await p.evaluate(({ c, end }) => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14(end) }, { c: cfg, end: AT + (+(process.env.SPAN || 9000)) });
+    await waitDone();
+    await p.evaluate(c => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14() }, BASE);
+    await waitDone();
+  } else {
+    await p.evaluate(`(()=>{${botSrc}})()`);
+    await p.evaluate(c => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14() }, cfg);
+    await waitDone();
   }
+  let st;
   st = await p.evaluate(() => window.__st14());
   const best = await p.evaluate(() => window.__B14.best);
-  const rec = { seed: SEED, bot: BOT, best, cfg, minutes: +((Date.now() - t0) / 60000).toFixed(1), castes: st.castes, n: st.n, err: st.err };
+  const rec = { seed: SEED, bot: BOT, best, cfg, branch: BRANCH || undefined, minutes: +((Date.now() - t0) / 60000).toFixed(1), castes: st.castes, n: st.n, err: st.err };
   if (best >= KEEP) {
     const replay = await p.evaluate(() => { const x = window.ants.replay.export(); return typeof x === 'string' ? x : JSON.stringify(x) });
     const log = await p.evaluate(() => JSON.stringify(window.__B14.log));
@@ -69,6 +81,7 @@ async function oneRun(browser, cfg, idx) {
     fs.writeFileSync(path.join(OUT, 'replays', name + '.log.json'), log);
     fs.writeFileSync(path.join(OUT, 'replays', name + '.cfg.json'), JSON.stringify(cfg));
     rec.saved = name;
+    if (BRANCH) rec.branch = BRANCH;
   }
   await ctx.close();
   return rec;

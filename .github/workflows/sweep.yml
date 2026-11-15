@@ -11,6 +11,7 @@ on:
       base: { description: 'Base config JSON (merged over the built-in best)', default: '{}' }
       keep: { description: 'Save replays scoring at least this', default: '131' }
       cfgs: { description: 'Optional JSON array of configs, one per run in order (grid)', default: '[]' }
+      branch: { description: 'Optional replay@tick: start every run from that replay at that tick (cfgs apply for one day, then base)', default: '' }
 
 jobs:
   plan:
@@ -48,6 +49,7 @@ jobs:
           BASE: ${{ inputs.base }}
           KEEP: ${{ inputs.keep }}
           CFGS: ${{ inputs.cfgs }}
+          BRANCH: ${{ inputs.branch }}
           OUT: out/job-${{ matrix.job }}
         run: node run.js
       - uses: actions/upload-artifact@v4
