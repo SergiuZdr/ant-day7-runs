@@ -8,7 +8,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false;
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,fLeaf:0,fMax:4,fDay:4,fRipe:2,farmLeaf:0,seedMax:9,storeAt:1},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,fLeaf:0,fMax:4,fDay:4,fRipe:2,farmLeaf:0,f1At:0,f1Leaf:0,seedMax:9,storeAt:1},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -101,6 +101,7 @@ function ants(){ const s=S(); let k=0;
     const ripe=(()=>{let r=0;for(const g of S().gardens)for(const sl of g.slots)if(sl.leaf&&sl.growth>=1)r++;return r})();
     if(n.digger<1) kind='digger';
     else if(B.cfg.fLeaf && x.day<=B.cfg.fDay && x.leaves>=B.cfg.fLeaf && ripe<B.cfg.fRipe && n.farmer<B.cfg.fMax && done(3)>0){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
+    else if(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf)){ /* the queen farms herself while there are no farmers */ if(n.leafcutter<B.cfg.lc0 || n.leafcutter<B.cfg.lcEarly*(P-1)){ if(x.clay>=1) kind='leafcutter'; else kind='digger' } else kind='digger' }
     else if(n.farmer<done(3)*B.cfg.farmersPer){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
     else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:B.cfg.lcShare)*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
     else if(n.digger<dWant) kind='digger';
