@@ -1,0 +1,7 @@
+{
+  "name": "ant-day7-runs",
+  "private": true,
+  "description": "Headless bot runs for the Ant Architect 'most ants by day 7' board",
+  "scripts": { "run": "node run.js", "summary": "node tools/summary.js" },
+  "dependencies": { "playwright": "1.48.2" }
+}

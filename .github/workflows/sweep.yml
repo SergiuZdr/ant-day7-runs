@@ -1,0 +1,68 @@
+name: day7-sweep
+on:
+  workflow_dispatch:
+    inputs:
+      seed: { description: 'Map seed', default: '1488' }
+      bot: { description: 'Bot file in bots/ (bot15, bot17)', default: 'bot15' }
+      jobs: { description: 'Parallel jobs (max 20)', default: '8' }
+      runs: { description: 'Runs per job', default: '4' }
+      mode: { description: 'local = small changes around base, fixed = base only', default: 'local' }
+      base: { description: 'Base config JSON (merged over the built-in best)', default: '{}' }
+      keep: { description: 'Save replays scoring at least this', default: '131' }
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          n=$(( ${{ inputs.jobs }} > 20 ? 20 : ${{ inputs.jobs }} ))
+          echo "matrix=$(seq -s, 1 $n | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Bot runs
+        env:
+          SEED: ${{ inputs.seed }}
+          BOT: ${{ inputs.bot }}
+          N: ${{ inputs.runs }}
+          MODE: ${{ inputs.mode }}
+          BASE: ${{ inputs.base }}
+          KEEP: ${{ inputs.keep }}
+          OUT: out/job-${{ matrix.job }}
+        run: node run.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: job-${{ matrix.job }}
+          path: out/
+          if-no-files-found: ignore
+
+  summary:
+    needs: run
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: all }
+      - run: node tools/summary.js all >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-results
+          path: all/
+          if-no-files-found: ignore
