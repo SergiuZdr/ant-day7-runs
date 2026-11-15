@@ -1,4 +1,5 @@
 // bot20 = bot18 + ideas from the #1 player's 172 save (seeds-v119/TOP1-172-ANALYSIS.md), all off by default:
+//  f1At/f1Leaf  no first farmer before this tick / leaf count (from bot19: 170 on 3377334)
 //  grid:1      houses on a 2x2 lattice packed beside the royal chamber (more +1 neighbour bonuses)
 //  sprouts:N   up to N Sprout Leaf Rooms beside Leaf Storage (needs 'build-sprout' in fTargets/extraBuy); sproutFrom = houses first; sproutRes = clay kept back
 //  jelly:1     buy the Royal Jelly upgrade (30 fungus, no clay) as soon as the card is owned; jellyPause:1 pauses eggs to bank the fungus; jellyBy = last tick to try
@@ -14,7 +15,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false; B.plan=null; B.qs={};
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -35,12 +36,12 @@ B.guard=null;
 const guarded=f=>{ B.guard=CK(); try{ return f() } finally { CR(B.guard); B.guard=null } };
 const cmd=c=>{ if(B.stop) throw Error('stopped'); if(B.guard) CR(B.guard); const r=R.command(c); if(B.guard) B.guard=CK(); B.cmds++; if(!r){B.fails++; log('fail',JSON.stringify(c))} return r };
 const home=()=>{ const q=S().queenHome; return [q.cx/8,(q.cy-228)/8] };
-function place(room,scoreFn){ const [w,h]=SZ[room]; const [hx,hy]=home(); const c=[];
+function place(room,scoreFn){ const [w,h]=SZ[room]; const [hx,hy]=home(); const c=[]; const SC=B.cfg.seedCover?seedCells():[];
   for(let y=0;y+h<=Y;y++) for(let x=0;x+w<=V;x++){ if(!freeR(x,y,w,h)||!covered(x,y,w,h)||!diggable(x,y,w,h)) continue;
-    const sc=scoreFn?scoreFn(x,y,w,h):Math.hypot(x+w/2-hx,(y+h/2-hy)*1.6); if(sc!=null) c.push([sc,x,y]) }
+    let sc=scoreFn?scoreFn(x,y,w,h):Math.hypot(x+w/2-hx,(y+h/2-hy)*1.6); if(sc!=null&&B.cfg.seedCover&&SC.some(([a,b])=>a>=x&&a<x+w&&b>=y&&b<y+h)) sc-=B.cfg.seedCover; if(sc!=null) c.push([sc,x,y]) }
   c.sort((a,b)=>a[0]-b[0]); let tries=0;
   for(const [,x,y] of c){ const key=room+':'+x+':'+y, f=B.fc.get(key); if(f&&S().tick-f<3000) continue;
-    const p=S().planRoom(room,x,y,false); if(!p.ok){ if(!/^Needs/.test(p.reason)) B.fc.set(key,S().tick); if(++tries>30) break; continue }
+    const p=S().planRoom(room,x,y,false); if(!p.ok){ B.why=B.why||{}; const wk=room+':'+String(p.reason).slice(0,50); B.why[wk]=(B.why[wk]||0)+1; if(!/^Needs/.test(p.reason)) B.fc.set(key,S().tick); if(++tries>30) break; continue }
     if(cmd({type:'place-room',room,col:x,row:y})){ log('place',room,x,y); cnt('r'+room); return true }
     if(++tries>30) break }
   return false }
@@ -49,7 +50,8 @@ const isDug=v=>v===-3||v>=0;
 function digTo(targets,tag){ const s=S(), g=G(), P=s.pheromones, L=s.upgrades.tunnel;
   const pendT=pendingWorks().filter(w=>w.kind===1).length; if(pendT>=B.cfg.maxTun) return 0;
   const ok=(x,y)=>x>=0&&y>=0&&x<V&&y<Y&&g[y*V+x]===-1&&P.contains(x,y)&&s.cellDirt(x,y)<=L;
-  targets=targets.filter(([x,y])=>ok(x,y)); if(!targets.length) return -1;
+  B.bad=B.bad||new Map(); const now=s.tick;
+  targets=targets.filter(([x,y])=>ok(x,y)&&!(B.cfg.digFix&&(B.bad.get(tag+':'+x+','+y)||0)>now)); if(!targets.length) return -1;
   const dug=[]; for(let i=0;i<V*Y;i++) if(isDug(g[i])) dug.push([i%V,Math.floor(i/V)]);
   const pairs=[]; for(const [tx,ty] of targets) for(const [dx,dy] of dug) pairs.push([Math.abs(tx-dx)+Math.abs(ty-dy),tx,ty,dx,dy]);
   pairs.sort((a,b)=>a[0]-b[0]);
@@ -58,6 +60,13 @@ function digTo(targets,tag){ const s=S(), g=G(), P=s.pheromones, L=s.upgrades.tu
     for(let j=k;j>=1;j--){ const ex2=fx+sx*j, ey2=fy+sy*j; const p=S().planRoom(5,ex2,ey2,false,{col:fx,row:fy}); if(!p.ok) continue;
       if(cmd({type:'place-room',room:5,col:ex2,row:ey2,fromCol:fx,fromRow:fy})){ log(tag,fx,fy,ex2,ey2); cnt(tag); return true } }
     return false };
+  if(B.cfg.digFix){ // up to 15 distinct targets, 3 start points each; targets that fail are skipped for a while
+    const per=new Map(); let nt=0; const tried=[];
+    for(const [,tx,ty,dx,dy] of pairs){ const k=tx+','+ty, c=per.get(k)||0; if(c>=3) continue; if(!c){ if(nt>=15) continue; nt++; tried.push(k) } per.set(k,c+1);
+      if(dx!==tx && tryLine(dx,dy,tx,dy)) return 1;
+      if(dy!==ty && tryLine(dx,dy,dx,ty)) return 1 }
+    for(const k of tried) B.bad.set(tag+':'+k,now+4500);
+    return 0 }
   let tries=0; for(const [,tx,ty,dx,dy] of pairs){ if(++tries>15) break;
     if(dx!==tx && tryLine(dx,dy,tx,dy)) return 1;
     if(dy!==ty && tryLine(dx,dy,dx,ty)) return 1 }
@@ -181,14 +190,21 @@ function ants(){ const s=S(); let k=0;
     let kind=null;
     if(n.digger<1) kind='digger';
     else if(has('ants-feeder') && n.feeder<B.cfg.feeders && tan()>=5 && x.brood>=2) kind='feeder';
-    else if(n.farmer<done(3)*B.cfg.farmersPer){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
+    else if(n.farmer<done(3)*B.cfg.farmersPer && !(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf)) && (!B.cfg.farmFall || x.clay>=2)){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
     else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:B.cfg.lcShare)*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
     else if(n.digger<dWant) kind='digger';
     else kind='digger';
     if(!kind||!hatch(kind)) return }
 }
 
-function manage(){ if(!B.plan){ B.plan=planCards(B.cfg.fTargets); B.cfg.buy=[...B.plan,...B.cfg.extraBuy.filter(x=>!B.plan.includes(x))]; B.cfg.seedMax=seedCost(B.cfg.buy); if(!B.cfg.ups.includes('tunnel')) B.cfg.ups=['tunnel',...B.cfg.ups]; log('plan',B.cfg.buy.join(','),B.cfg.seedMax) }
+// cancel works that made no digging progress for cfg.stuckT ticks (unreachable or unpaid), so they stop blocking new digging
+function unstick(){ if(!B.cfg.stuckT) return; const s=S(); B.wp=B.wp||new Map();
+  for(const w of pendingWorks()){ const k=w.id, p=(w.ptr||0)+(w.dug||0); const o=B.wp.get(k);
+    if(!o||o.p!==p){ B.wp.set(k,{p,t:s.tick}); continue }
+    if(s.tick-o.t>=B.cfg.stuckT){ const c=w.cells&&w.cells.length?w.cells[Math.min(w.cells.length-1,w.ptr||0)]:null;
+      const col=c!=null?Math.floor((c%1280)/8):Math.floor(w.cx/8), row=c!=null?Math.floor((Math.floor(c/1280)-228)/8):Math.floor((w.cy-228)/8);
+      if(cmd({type:'cancel-room',col,row})){ log('cancel',w.kind,w.room,col,row); cnt('cancel') } B.wp.set(k,{p,t:s.tick}) } } }
+function manage(){ unstick(); if(!B.plan){ B.plan=planCards(B.cfg.fTargets); B.cfg.buy=[...B.plan,...B.cfg.extraBuy.filter(x=>!B.plan.includes(x))]; B.cfg.seedMax=seedCost(B.cfg.buy); if(!B.cfg.ups.includes('tunnel')) B.cfg.ups=['tunnel',...B.cfg.ups]; log('plan',B.cfg.buy.join(','),B.cfg.seedMax) }
   tree(); jelly(); fungusBank(); if(B.cfg.seedPar){ if(!digTan()) digClay(); seedPar() } else if(!digTan()&&!digSeeds()) digClay(); if(B.cfg.upPri){ upgrades(); build() } else { build(); upgrades() } ants() }
 
 window.__run14=async(maxTicks)=>{ maxTicks=maxTicks??B.cfg.end; const myId=(B.runId=(B.runId||0)+1); B.done=false; try{
@@ -200,5 +216,5 @@ window.__run14=async(maxTicks)=>{ maxTicks=maxTicks??B.cfg.end; const myId=(B.ru
     if(S().tick%9000<150) log('day',st().day,{score:sc,cap:st().capacity,brood:st().brood,leaves:st().leaves,clay:st().clay,fungus:st().fungus,castes:castes()});
     await new Promise(r=>setTimeout(r,0));
   } B.done=true }catch(e){ B.err=String(e)+' '+(e.stack||'').slice(0,400) } };
-window.__st14=()=>{ const x=st(); return {up:S().upgrades,rooms:{h:rooms(1).length,sp:rooms(17).length,ls:rooms(4).length,f:rooms(3).length,ph:rooms(6).length,cs:rooms(7).length},qs:B.qs,tan:tan(),unl:[...S().unlocks.unlocked],seeds:S().unlocks.collected,tick:S().tick,day:x.day,score:score(),best:B.best,cap:x.capacity,brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done} };
+window.__st14=()=>{ const x=st(); return {why:B.why,noClay:B.noClay,pend:pendingWorks().map(w=>[w.id,w.kind,w.room,w.ptr,w.cells.length,Math.round(w.cx/8),Math.round((w.cy-228)/8),w.reach,w.n]),owed:S().owed,up:S().upgrades,rooms:{h:rooms(1).length,sp:rooms(17).length,ls:rooms(4).length,f:rooms(3).length,ph:rooms(6).length,cs:rooms(7).length},qs:B.qs,tan:tan(),unl:[...S().unlocks.unlocked],seeds:S().unlocks.collected,tick:S().tick,day:x.day,score:score(),best:B.best,cap:x.capacity,brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done} };
 return 'bot20 loaded';
