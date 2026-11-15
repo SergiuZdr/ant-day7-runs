@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       seed: { description: 'Map seed', default: '1488' }
+      seeds: { description: 'Optional: comma list of seeds spread over all runs, or "random"', default: '' }
       bot: { description: 'Bot file in bots/ (bot15, bot17)', default: 'bot15' }
       jobs: { description: 'Parallel jobs (max 20)', default: '8' }
       runs: { description: 'Runs per job', default: '4' }
@@ -38,6 +39,8 @@ jobs:
       - name: Bot runs
         env:
           SEED: ${{ inputs.seed }}
+          SEEDS: ${{ inputs.seeds }}
+          JOB: ${{ matrix.job }}
           BOT: ${{ inputs.bot }}
           N: ${{ inputs.runs }}
           MODE: ${{ inputs.mode }}

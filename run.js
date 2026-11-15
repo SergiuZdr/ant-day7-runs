@@ -3,7 +3,10 @@
 const fs = require('fs'), path = require('path');
 let pw; try { pw = require('playwright') } catch { pw = require('playwright-core') }
 
-const SEED = +(process.env.SEED || 1488);
+const SEEDS = (process.env.SEEDS || '').split(',').map(x => x.trim()).filter(Boolean);
+const JOB = +(process.env.JOB || 1);
+const seedFor = i => !SEEDS.length ? +(process.env.SEED || 1488) : SEEDS[0] === 'random' ? 1 + Math.floor(Math.random() * 999999) : +SEEDS[((JOB - 1) * N + i) % SEEDS.length];
+let SEED = +(process.env.SEED || 1488);
 const BOT = process.env.BOT || 'bot15';
 const N = +(process.env.N || 4);
 const MODE = process.env.MODE || 'local';
@@ -71,6 +74,7 @@ async function oneRun(browser, cfg, idx) {
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-background-timer-throttling', '--disable-renderer-backgrounding']
   });
   for (let i = 0; i < N; i++) {
+    SEED = seedFor(i);
     const cfg = nextCfg(i);
     let rec;
     try { rec = await oneRun(browser, cfg, i) } catch (e) { rec = { seed: SEED, bot: BOT, best: 0, cfg, error: String(e).slice(0, 300) } }
