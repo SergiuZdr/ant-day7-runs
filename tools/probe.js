@@ -10,4 +10,4 @@ const cost=(...ts)=>{const set=new Set();let g=0;for(const id of ts){let x=id;wh
 return {seeds16:sd.filter(d=>d<=16).length,seeds25:sd.filter(d=>d<=25).length,seeds35:sd.filter(d=>d<=35).length,
  tan25:near(2,25),tan35:near(2,35),brown16:near(1,16),brown25:near(1,25),
  cFeeder:cost('ants-feeder','build-tan-clay-store'),cPit:cost('build-clay-pit'),cFeederPit:cost('ants-feeder','build-tan-clay-store','build-clay-pit'),
- cFood:cost('upgrades-food'),cScent:cost('upgrades-scent'),cJelly:cost('upgrades-jelly')};
+ cFood:cost('upgrades-food'),cQueen:cost('build-queen'),cQueenFood:cost('build-queen','upgrades-food'),cScent:cost('upgrades-scent'),cJelly:cost('upgrades-jelly')};

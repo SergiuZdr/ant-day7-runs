@@ -1,4 +1,5 @@
 // bot20 = bot18 + ideas from the #1 player's 172 save (seeds-v119/TOP1-172-ANALYSIS.md), all off by default:
+//  lcLateAt/lcLate/lcLateEnd  leafcutter share lcLate between those ticks (keeps fungus up on day 7)
 //  f1At/f1Leaf  no first farmer before this tick / leaf count (from bot19: 170 on 3377334)
 //  grid:1      houses on a 2x2 lattice packed beside the royal chamber (more +1 neighbour bonuses)
 //  sprouts:N   up to N Sprout Leaf Rooms beside Leaf Storage (needs 'build-sprout' in fTargets/extraBuy); sproutFrom = houses first; sproutRes = clay kept back
@@ -15,7 +16,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false; B.plan=null; B.qs={};
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,lcLateAt:0,lcLate:0.35,lcLateEnd:58000,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -194,7 +195,7 @@ function ants(){ const s=S(); let k=0;
     if(n.digger<1) kind='digger';
     else if(has('ants-feeder') && n.feeder<B.cfg.feeders && tan()>=5 && x.brood>=2) kind='feeder';
     else if(n.farmer<done(3)*B.cfg.farmersPer && !(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf)) && (!B.cfg.farmFall || x.clay>=2)){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
-    else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:B.cfg.lcShare)*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
+    else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:(B.cfg.lcLateAt&&S().tick>=B.cfg.lcLateAt&&S().tick<B.cfg.lcLateEnd?B.cfg.lcLate:B.cfg.lcShare))*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
     else if(n.digger<dWant) kind='digger';
     else kind='digger';
     if(!kind||!hatch(kind)) return }

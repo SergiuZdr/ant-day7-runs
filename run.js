@@ -54,13 +54,13 @@ async function oneRun(browser, cfg, idx) {
   const waitDone = async () => { for (let i = 0; i < 1200; i++) { await sleep(3000); if (await p.evaluate(() => window.__B14.done || !!window.__B14.err)) break } };
   if (BRANCH) {
     // start from a saved replay at tick AT, play the variant cfg for one day, then the base cfg to the end
-    const [file, at] = BRANCH.split('@'); const AT = +at;
+    const [file, at, span] = BRANCH.split('@'); const AT = +at; const SPANT = +(span || process.env.SPAN || 9000);
     const txt = fs.readFileSync(path.join(__dirname, file), 'utf8');
     await p.evaluate(async ({ txt, AT }) => { const R = window.ants.replay; await R.import(txt); await new Promise(r => setTimeout(r, 1500)); await R.seek(AT); await new Promise(r => setTimeout(r, 1500)); await R.branch(); await new Promise(r => setTimeout(r, 1500)) }, { txt, AT });
     for (let i = 0; i < 30; i++) { const t = await p.evaluate(() => window.__sim ? window.__sim.tick : -1); if (t >= AT - 200 && t <= AT + 200) break; await sleep(1000) }
     const t = await p.evaluate(() => window.__sim.tick); if (Math.abs(t - AT) > 200) throw Error('branch landed at tick ' + t);
     await p.evaluate(`(()=>{${botSrc}})()`);
-    await p.evaluate(({ c, end }) => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14(end) }, { c: cfg, end: AT + (+(process.env.SPAN || 9000)) });
+    await p.evaluate(({ c, end }) => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14(end) }, { c: cfg, end: AT + SPANT });
     await waitDone();
     await p.evaluate(c => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14() }, BASE);
     await waitDone();
