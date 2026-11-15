@@ -10,7 +10,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false; B.plan=null; B.qs={};
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,seedMax:9,storeAt:1},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -123,6 +123,8 @@ function build(){ const s=S(), x=st(), n=castes(), P=score();
   if(pend>=Math.max(1,Math.min(B.cfg.maxPend,Math.floor(n.digger/2)))) return;
   const leaves=x.leaves, clay=x.clay, cap=x.capacity, brood=x.brood;
   const pendRoom=r=>pendingWorks().some(w=>w.kind===2&&w.room===r);
+  if(B.cfg.hard){ const wantT=B.cfg.tanStore&&has('build-tan-clay-store')&&!rooms(13).length, wantP=B.cfg.pits&&has('build-clay-pit')&&rooms(15).length<B.cfg.pits;
+    if((wantT||wantP) && cap-(P-1)-brood>=1){ if(x.leafCapacity<31 && clay>=1 && !pendRoom(4)) return place(4); if(wantT && leaves>=30 && !pendRoom(13)) return place(13); if(!wantT && wantP && leaves>=30 && x.fungus>=20 && !pendRoom(15)) return place(15); return } }
   // 0e. Brown Clay Pit: water seeps in by itself, 1 brown clay per ~30 s each
   if(B.cfg.pits && has('build-clay-pit') && rooms(15).length<B.cfg.pits){ if(x.leafCapacity<31 && clay>=1 && !pendRoom(4)) return place(4); if(leaves>=30 && x.fungus>=20 && !pendRoom(15)) return place(15); if(B.cfg.reserve30 && cap-(P-1)-brood>=1 && x.leafCapacity>=31) return }
   // 0f. seed-hunting pheromones
