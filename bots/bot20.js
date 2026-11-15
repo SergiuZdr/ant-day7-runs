@@ -16,7 +16,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false; B.plan=null; B.qs={};
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,lcLateAt:0,lcLate:0.35,lcLateEnd:58000,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,house1First:0,ls1Tun:0,lcFall:0,lcLateAt:0,lcLate:0.35,lcLateEnd:58000,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -144,6 +144,7 @@ const houseScore=(x0,y0,w,h)=>{ if(!outRing(x0,y0,w,h)) return null; if(B.cfg.ho
 // farmEast: farms east of the queen, as close to her chamber as possible; houseWest: houses only west of her
 const RX=()=>S().royal.cx/8, RY=()=>(S().royal.cy-228)/8;
 const farmEastScore=(x0,y0,w,h)=>{ if(x0<RX()+B.cfg.farmEast-1) return null; return royalD(x0,y0,w,h)*3+Math.abs(y0+h/2-RY()) };
+const lsTunScore=(x0,y0,w,h)=>{ const g=G(); let k=0; for(let y=y0-2;y<=y0+3;y++) for(let x=x0-2;x<=x0+5;x++){ if(x<0||y<0||x>=V||y>=Y) continue; if(x>=x0&&x<x0+w&&y>=y0&&y<y0+h) continue; const v=g[y*V+x]; if(v===-3||(v>=0&&S().elems[v]&&S().elems[v].kind===1)) k++ } return -k*3+dHome(x0,y0,w,h)*0.5 };
 const houseGrid=(x0,y0,w,h)=>{ const r=S().royal; const rx=Math.round(r.cx/8-2), ry=Math.round((r.cy-228)/8-1); if((((x0-rx)%2)+2)%2||(((y0-ry)%2)+2)%2) return null;
   const hs=rooms(1); let k=0; for(const e of hs){ const ex=e.cx/8-1,ey=(e.cy-228)/8-1; if(Math.max(Math.abs(ex-x0),Math.abs(ey-y0))<=6) k++ }
   const d=royalD(x0,y0,w,h); return d>6?null:-k*10+d*2 };
@@ -170,7 +171,9 @@ function build(){ const s=S(), x=st(), n=castes(), P=score();
   // 0. brown clay storage (+20 clay) once unlocked
   if(B.cfg.storeAt && S().unlocks.unlocked.has('build-dirt-store') && !rooms(7).length && clay>=10 && !pendRoom(7)) return place(7);
   // 1. first leaf storage
-  if(!rooms(4).length && clay>=1) return place(4);
+  if(!rooms(4).length && clay>=1) return place(4,B.cfg.ls1Tun?lsTunScore:undefined);
+  // day 1: no farm (and no 2nd leaf storage unless needed to hold 8 leaves) before the first house
+  if(B.cfg.house1First && !rooms(1).length){ if(clay>=5 && leaves>=8) return (B.cfg.grid&&place(1,houseGrid))||place(1,houseScore); if(x.leafCapacity<8 && clay>=1 && rooms(4).length<2 && !pendRoom(4)) return place(4,B.cfg.ls1Tun?lsTunScore:undefined); return }
   // 2. houses before capacity runs out
   if(cap-(P-1)-brood<B.cfg.houseSlack && !pendRoom(1) && clay>=5 && leaves>=8) return (B.cfg.grid&&place(1,houseGrid))||place(1,houseScore);
   // 3. farms: one per farmPer leafcutters
@@ -195,7 +198,7 @@ function ants(){ const s=S(); let k=0;
     if(n.digger<1) kind='digger';
     else if(has('ants-feeder') && n.feeder<B.cfg.feeders && tan()>=5 && x.brood>=2) kind='feeder';
     else if(n.farmer<done(3)*B.cfg.farmersPer && !(n.farmer===0 && (S().tick<B.cfg.f1At || x.leaves<B.cfg.f1Leaf)) && (!B.cfg.farmFall || x.clay>=2)){ if(x.brood>=2&&x.clay>=2) kind='farmer'; else return }
-    else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:(B.cfg.lcLateAt&&S().tick>=B.cfg.lcLateAt&&S().tick<B.cfg.lcLateEnd?B.cfg.lcLate:B.cfg.lcShare))*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant) kind='digger'; else return }
+    else if(n.leafcutter<B.cfg.lc0 || n.leafcutter<(st().day<=B.cfg.dSwitch?B.cfg.lcEarly:(B.cfg.lcLateAt&&S().tick>=B.cfg.lcLateAt&&S().tick<B.cfg.lcLateEnd?B.cfg.lcLate:B.cfg.lcShare))*(P-1)){ if(x.clay>=1) kind='leafcutter'; else if(n.digger<dWant||B.cfg.lcFall) kind='digger'; else return }
     else if(n.digger<dWant) kind='digger';
     else kind='digger';
     if(!kind||!hatch(kind)) return }
