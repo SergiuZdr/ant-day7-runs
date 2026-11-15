@@ -29,6 +29,7 @@ function nextCfg(i) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const botSrc = fs.readFileSync(path.join(__dirname, 'bots', BOT + '.js'), 'utf8');
+const probeSrc = fs.readFileSync(path.join(__dirname, 'tools', 'probe.js'), 'utf8');
 
 async function oneRun(browser, cfg, idx) {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
@@ -43,6 +44,10 @@ async function oneRun(browser, cfg, idx) {
   const t0 = Date.now();
   await p.goto(`${URL}?seed=${SEED}&r=${Date.now()}`, { waitUntil: 'load', timeout: 180000 });
   for (let i = 0; i < 90; i++) { const t = await p.evaluate(() => window.__sim && window.ants ? window.__sim.tick : -1); if (t === 0) break; await sleep(2000) }
+  if (MODE === 'probe') { const pr = await p.evaluate(`(()=>{${probeSrc}})()`); await ctx.close();
+    // rank: seeds we can reach for the feeder + clay pit path, tan clay for feeders
+    const score = pr.seeds35 - pr.cFeederPit + Math.min(pr.tan35, 15) / 3;
+    return { seed: SEED, bot: 'probe', best: +score.toFixed(1), cfg: {}, probe: pr } }
   await p.evaluate(`(()=>{${botSrc}})()`);
   await p.evaluate(c => { window.__B14.cfg = Object.assign(window.__B14.cfg, c); window.__run14() }, cfg);
   let st;
