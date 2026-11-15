@@ -19,7 +19,9 @@ const BASE = Object.assign({ lcEarly: 0.7, lcShare: 0.25, dSwitch: 4, houseSlack
 const OPTS = { lcEarly: [0.6, 0.65, 0.7, 0.75, 0.8], lcShare: [0.15, 0.2, 0.25, 0.3], dSwitch: [3, 4, 5], houseSlack: [2, 3, 4], farmPer: [4, 5, 6],
   maxPend: [2, 3], hr: [7, 8, 9, 10], tunLen: [5, 6, 7], digMax: [2, 3, 4], lc0: [2, 3] };
 const pick = a => a[Math.floor(Math.random() * a.length)];
+const CFGS = JSON.parse(process.env.CFGS || '[]');
 function nextCfg(i) {
+  if (CFGS.length) return { ...BASE, ...CFGS[((JOB - 1) * N + i) % CFGS.length] };
   const c = { ...BASE };
   if (MODE === 'fixed' || i === 0 && MODE !== 'random') return c;
   const keys = Object.keys(OPTS).sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 3));

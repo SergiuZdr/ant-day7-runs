@@ -10,6 +10,7 @@ on:
       mode: { description: 'local = small changes around base, fixed = base only', default: 'local' }
       base: { description: 'Base config JSON (merged over the built-in best)', default: '{}' }
       keep: { description: 'Save replays scoring at least this', default: '131' }
+      cfgs: { description: 'Optional JSON array of configs, one per run in order (grid)', default: '[]' }
 
 jobs:
   plan:
@@ -46,6 +47,7 @@ jobs:
           MODE: ${{ inputs.mode }}
           BASE: ${{ inputs.base }}
           KEEP: ${{ inputs.keep }}
+          CFGS: ${{ inputs.cfgs }}
           OUT: out/job-${{ matrix.job }}
         run: node run.js
       - uses: actions/upload-artifact@v4
