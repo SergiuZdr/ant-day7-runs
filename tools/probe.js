@@ -7,7 +7,9 @@ const u=s.unlocks,t=u.tree,ids=Object.keys(t);const nb=id=>[...t[id].links.filte
 const dist={},prev={},dn=new Set();for(const id of ids){if(t[id].links.some(x=>x.startsWith('@')))dist[id]=t[id].seeds}
 while(true){let b=null;for(const id of ids)if(!dn.has(id)&&dist[id]!=null&&(b==null||dist[id]<dist[b]))b=id;if(b==null)break;dn.add(b);for(const n of nb(b)){const c=dist[b]+t[n].seeds;if(dist[n]==null||c<dist[n]){dist[n]=c;prev[n]=b}}}
 const cost=(...ts)=>{const set=new Set();let g=0;for(const id of ts){let x=id;while(x){set.add(x);g=Math.max(g,t[x].group);x=prev[x]}}let c=0;for(const x of set)c+=t[x].seeds;return c+[0,1,3,6,10][g]};
-return {seeds16:sd.filter(d=>d<=16).length,seeds25:sd.filter(d=>d<=25).length,seeds35:sd.filter(d=>d<=35).length,
+const tanIn=cells.filter(r=>r[0]===2&&r[2]).length,brownIn=cells.filter(r=>r[0]===1&&r[2]).length;
+const seedsIn=s.seeds.filter(x=>P.contains(Math.floor((x.cell%1280)/8),Math.floor((Math.floor(x.cell/1280)-228)/8))).length;
+return {tanIn,brownIn,seedsIn,seeds16:sd.filter(d=>d<=16).length,seeds25:sd.filter(d=>d<=25).length,seeds35:sd.filter(d=>d<=35).length,
  tan25:near(2,25),tan35:near(2,35),brown16:near(1,16),brown25:near(1,25),
  cFeeder:cost('ants-feeder','build-tan-clay-store'),cPit:cost('build-clay-pit'),cFeederPit:cost('ants-feeder','build-tan-clay-store','build-clay-pit'),
  cFood:cost('upgrades-food'),cQueen:cost('build-queen'),cQueenFood:cost('build-queen','upgrades-food'),cScent:cost('upgrades-scent'),cJelly:cost('upgrades-jelly')};
