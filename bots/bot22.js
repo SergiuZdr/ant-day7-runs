@@ -17,7 +17,7 @@ const R=window.ants.replay,V=160,Y=89;
 const S=()=>window.__sim;
 const B=window.__B14=window.__B14||{log:[],cmds:0,fails:0,err:null,fc:new Map(),n:{},best:0};
 B.stop=false; B.plan=null; B.qs={};
-B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,house1First:0,ls1Tun:0,lcFall:0,lcLateAt:0,lcLate:0.35,lcLateEnd:58000,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000,tanStores:1,tunEarly:0,eggCh:0,food2:0},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
+B.cfg=Object.assign({end:63000,farmPer:4,houseSlack:3,maxPend:2,dig0:1,digMax:4,maxTun:1,tunLen:6,lc0:2,farmersPer:1,lcEarly:0.6,dSwitch:4,hr:8,target:0,lcShare:0.25,lcEarly:0.7,farmPer:5,digMax:3,buy:['upgrades-food'],ups:['food'],upClay:0,upPri:0,seedDig:0,feeders:0,fTargets:[],extraBuy:['upgrades-food'],tanStore:0,fstores:0,pheroAt:0,reserve30:1,pause:0,sandW:0,seedNear:0,gens:0,seedAt:0,ring:0,farmAdj:0,pheroN:0,pheroSeedAt:0,pits:0,hard:0,seedMax:9,storeAt:1,grid:0,house1First:0,ls1Tun:0,lcFall:0,lcLateAt:0,lcLate:0.35,lcLateEnd:58000,farmEast:0,houseWest:0,seedCover:0,digFix:0,farmFall:0,stuckT:0,f1At:0,f1Leaf:0,seedPar:0,seedDiggers:4,sprouts:0,sproutFrom:2,sproutRes:5,sproutLs:2,jelly:0,jellyPause:1,jellyBy:54000,tanStores:1,tunEarly:0,eggCh:0,food2:0,bankFrom:0,bankTo:0},B.cfg||{}); // defaults = best sweep result on seed 1488 (117 ants by day 7)
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4]};
 const log=(...a)=>{B.log.push([S().tick,...a]);if(B.log.length>400)B.log.splice(0,100)};
 const cnt=k=>{B.n[k]=(B.n[k]||0)+1};
@@ -215,17 +215,22 @@ function unstick(){ if(!B.cfg.stuckT) return; const s=S(); B.wp=B.wp||new Map();
     if(s.tick-o.t>=B.cfg.stuckT){ const c=w.cells&&w.cells.length?w.cells[Math.min(w.cells.length-1,w.ptr||0)]:null;
       const col=c!=null?Math.floor((c%1280)/8):Math.floor(w.cx/8), row=c!=null?Math.floor((Math.floor(c/1280)-228)/8):Math.floor((w.cy-228)/8);
       if(cmd({type:'cancel-room',col,row})){ log('cancel',w.kind,w.room,col,row); cnt('cancel') } B.wp.set(k,{p,t:s.tick}) } } }
-function manage(){ unstick(); if(!B.plan){ B.plan=planCards(B.cfg.fTargets); B.cfg.buy=[...B.plan,...B.cfg.extraBuy.filter(x=>!B.plan.includes(x))]; B.cfg.seedMax=seedCost(B.cfg.buy); if(!B.cfg.ups.includes('tunnel')) B.cfg.ups=['tunnel',...B.cfg.ups]; log('plan',B.cfg.buy.join(','),B.cfg.seedMax) }
+// bank: no eggs between bankFrom and bankTo (resources pile up for a late burst)
+function bank(){ const s=S(); if(!B.cfg.bankFrom) return; const want=s.tick>=B.cfg.bankFrom&&s.tick<B.cfg.bankTo;
+  if(want&&!s.eggsPaused){ if(cmd({type:'room-action',action:'pause-eggs',id:s.royal.id})){ B.bk=1; cnt('bank') } }
+  else if(!want&&B.bk&&s.eggsPaused){ if(cmd({type:'room-action',action:'resume-eggs',id:s.royal.id})){ B.bk=0; cnt('unbank') } } }
+function manage(){ unstick(); bank(); if(!B.plan){ B.plan=planCards(B.cfg.fTargets); B.cfg.buy=[...B.plan,...B.cfg.extraBuy.filter(x=>!B.plan.includes(x))]; B.cfg.seedMax=seedCost(B.cfg.buy); if(!B.cfg.ups.includes('tunnel')) B.cfg.ups=['tunnel',...B.cfg.ups]; log('plan',B.cfg.buy.join(','),B.cfg.seedMax) }
   tree(); jelly(); fungusBank(); if(B.cfg.seedPar){ if(!digTan()) digClay(); seedPar() } else if(!digTan()&&!digSeeds()) digClay(); if(B.cfg.upPri){ upgrades(); build() } else { build(); upgrades() } ants() }
 
 window.__run14=async(maxTicks)=>{ maxTicks=maxTicks??B.cfg.end; const myId=(B.runId=(B.runId||0)+1); B.done=false; try{
   while(!B.stop && B.runId===myId && S().tick<maxTicks){
     guarded(manage);
     await R.step(Math.min(150,maxTicks-S().tick));
+    if(S().tick%1500<150){ const x=st(); B.ts=B.ts||[]; B.ts.push([S().tick,score(),x.fungus,x.fungusCapacity,x.leaves,x.leafCapacity,x.clay,x.capacity]) }
     const sc=score(); if(st().day<=7 && sc>B.best){B.best=sc;B.bestT=S().tick}
     { const q=S().queen; if(q&&st().day>=4&&st().day<=7){ B.qs=B.qs||{}; B.qs[q.task]=(B.qs[q.task]||0)+1 } }
     if(S().tick%9000<150) log('day',st().day,{score:sc,cap:st().capacity,brood:st().brood,leaves:st().leaves,clay:st().clay,fungus:st().fungus,castes:castes()});
     await new Promise(r=>setTimeout(r,0));
   } B.done=true }catch(e){ B.err=String(e)+' '+(e.stack||'').slice(0,400) } };
-window.__st14=()=>{ const x=st(); return {why:B.why,noClay:B.noClay,pend:pendingWorks().map(w=>[w.id,w.kind,w.room,w.ptr,w.cells.length,Math.round(w.cx/8),Math.round((w.cy-228)/8),w.reach,w.n]),owed:S().owed,up:S().upgrades,rooms:{h:rooms(1).length,sp:rooms(17).length,ls:rooms(4).length,f:rooms(3).length,ph:rooms(6).length,cs:rooms(7).length},qs:B.qs,tan:tan(),unl:[...S().unlocks.unlocked],seeds:S().unlocks.collected,tick:S().tick,day:x.day,score:score(),best:B.best,cap:x.capacity,brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done} };
+window.__st14=()=>{ const x=st(); return {why:B.why,noClay:B.noClay,pend:pendingWorks().map(w=>[w.id,w.kind,w.room,w.ptr,w.cells.length,Math.round(w.cx/8),Math.round((w.cy-228)/8),w.reach,w.n]),owed:S().owed,up:S().upgrades,rooms:{h:rooms(1).length,sp:rooms(17).length,ls:rooms(4).length,f:rooms(3).length,ph:rooms(6).length,cs:rooms(7).length},qs:B.qs,ts:B.ts,tan:tan(),unl:[...S().unlocks.unlocked],seeds:S().unlocks.collected,tick:S().tick,day:x.day,score:score(),best:B.best,cap:x.capacity,brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done} };
 return 'bot22 loaded';

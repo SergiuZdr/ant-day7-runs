@@ -73,7 +73,7 @@ async function oneRun(browser, cfg, idx) {
   st = await p.evaluate(() => window.__st14());
   const best = await p.evaluate(() => window.__B14.best);
   const bestT = await p.evaluate(() => window.__B14.bestT);
-  const rec = { seed: SEED, bot: BOT, best, bestT, cfg, branch: BRANCH || undefined, minutes: +((Date.now() - t0) / 60000).toFixed(1), castes: st.castes, n: st.n, err: st.err };
+  const rec = { seed: SEED, bot: BOT, best, bestT, cfg, branch: BRANCH || undefined, minutes: +((Date.now() - t0) / 60000).toFixed(1), castes: st.castes, n: st.n, ts: st.ts, err: st.err };
   if (best >= KEEP) {
     const replay = await p.evaluate(() => { const x = window.ants.replay.export(); return typeof x === 'string' ? x : JSON.stringify(x) });
     const log = await p.evaluate(() => JSON.stringify(window.__B14.log));
