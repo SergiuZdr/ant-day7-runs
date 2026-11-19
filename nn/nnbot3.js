@@ -1,5 +1,5 @@
 // nnbot3 = nnbot2 + placement net (window.__PN). nnbot2 = nnbot with one net per day (window.__NN = [7 nets]) and 16 outputs. nnbot = bot22 + neural controller (window.__NN). bot22 = bot20 + tanStores:N (extra Tan Clay Storage), tunEarly:1 (Strong Digging before group 2), eggCh:N (Egg Chambers beside the queen, needs build-egg in fTargets), food2: -1 never buys Rich Food level 2 (10 tan clay), 1 keeps digging tan for it after the feeders
-// bot20 = bot18 + ideas from the #1 player's 172 save (seeds-v119/TOP1-172-ANALYSIS.md), all off by default:
+// bot20 = bot18 + ideas from the #1 player's 172 save (seeds/v119/TOP1-172-ANALYSIS.md), all off by default:
 //  lcLateAt/lcLate/lcLateEnd  leafcutter share lcLate between those ticks (keeps fungus up on day 7)
 //  f1At/f1Leaf  no first farmer before this tick / leaf count (from bot19: 170 on 3377334)
 //  grid:1      houses on a 2x2 lattice packed beside the royal chamber (more +1 neighbour bonuses)
