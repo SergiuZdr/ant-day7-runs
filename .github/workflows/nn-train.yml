@@ -1,0 +1,50 @@
+name: nn-train
+on:
+  workflow_dispatch:
+    inputs:
+      seed: { description: 'Map seed', default: '55917' }
+      start: { description: 'Start policy in nn/ (pol file)', default: 'start220.json' }
+      cfg: { description: 'Bot config in nn/', default: 'cfg200.json' }
+      jobs: { description: 'Parallel islands (max 20)', default: '20' }
+      par: { description: 'Games in parallel per job', default: '4' }
+      pop: { description: 'Candidates per generation', default: '16' }
+      sigma: { description: 'Mutation size', default: '0.05' }
+      minutes: { description: 'Training minutes per job', default: '320' }
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          n=$(( ${{ inputs.jobs }} > 20 ? 20 : ${{ inputs.jobs }} ))
+          echo "matrix=$(seq -s, 1 $n | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+
+  train:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Train (one island)
+        env:
+          START: nn/${{ inputs.start }}
+          RS: ${{ matrix.job }}${{ github.run_number }}7
+          MAXMIN: ${{ inputs.minutes }}
+        run: node nn/es8.js ${{ inputs.seed }} nn/${{ inputs.cfg }} out/job-${{ matrix.job }} ${{ inputs.par }} ${{ inputs.pop }} ${{ inputs.sigma }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: island-${{ matrix.job }}
+          path: out/
+          if-no-files-found: ignore
