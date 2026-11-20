@@ -80,7 +80,7 @@ function digTo(targets,tag){ const s=S(), g=G(), P=s.pheromones, L=s.digLevel();
     if(dy!==ty && tryLine(dx,dy,dx,ty)) return 1 }
   for(const k of tried) B.bad.set(tag+':'+k,now+4500);
   return 0 }
-function digClay(){ const s=S(), g=G(), x=st(); if(x.clay>=x.clayCapacity-(B.hold?0:2)) return 0;
+function digClay(){ const s=S(), g=G(), x=st(); if(x.clay>=x.clayCapacity-(B.hold||B.holdUp?0:2)) return 0;
   const t=[]; for(let i=0;i<V*Y;i++){ if(s.terrain.clay[i]===1&&g[i]===-1) t.push([i%V,Math.floor(i/V)]) }
   const r=digTo(t,'tun'); if(r<0){ B.noClay=S().tick; return 0 } return r }
 
@@ -131,14 +131,14 @@ function planCards(targets){ const u=S().unlocks,t=u.tree,ids=Object.keys(t);
     for(const n of nb(b)){ const c=dist[b]+(u.unlocked.has(n)?0:t[n].seeds); if(dist[n]==null||c<dist[n]){dist[n]=c;prev[n]=b} } }
   const out=[]; for(const tg of targets){ const ch=[]; let x=tg; while(x!=null&&!out.includes(x)&&!ch.includes(x)){ ch.unshift(x); x=prev[x] } for(const c of ch) if(!out.includes(c)) out.push(c) }
   return out }
-function research(){ const c=B.cfg,s=S(),u=s.unlocks; if(!c.pits||s.tick<c.resAt) return false;
-  if(!B.plan){ B.plan=planCards(c.cards); const t=u.tree; B.needSeeds=B.plan.reduce((a,id)=>a+t[id].seeds,0); B.needGroup=Math.max(0,...B.plan.map(id=>t[id].group)); log('plan',B.plan.join(','),B.needSeeds,B.needGroup) }
+function research(){ const c=B.cfg,s=S(),u=s.unlocks; if(!(c.pits||B.resOn)||s.tick<c.resAt) return false;
+  if(!B.plan){ B.plan=planCards(c.pits?c.cards:(c.upCards||['upgrades-backs','upgrades-dig'])); const t=u.tree; B.needSeeds=B.plan.reduce((a,id)=>a+t[id].seeds,0); B.needGroup=Math.max(0,...B.plan.map(id=>t[id].group)); log('plan',B.plan.join(','),B.needSeeds,B.needGroup) }
   // queen level up to the needed group
   if(u.revealed<B.needGroup){ const pr=[10,20,30,40][s.queenLevel()-1]; if(st().fungus>=pr+c.fungusRes){ if(cmd({type:'upgrade-room',kind:'queen',id:s.royal.id})){ log('queen',s.queenLevel()); cnt('queen'); return true } } }
   // buy cards in order
   for(const id of B.plan){ if(u.unlocked.has(id)) continue; if(u.refusal(id)===null&&cmd({type:'buy-seed-card',id})){ log('buy',id); cnt('buy'); return true } break }
   return false }
-function digSeeds(){ const c=B.cfg,s=S(),u=s.unlocks; if(!c.pits||!B.plan||s.tick<c.resAt) return 0; const left=B.plan.filter(id=>!u.unlocked.has(id)).reduce((a,id)=>a+u.tree[id].seeds,0);
+function digSeeds(){ const c=B.cfg,s=S(),u=s.unlocks; if(!(c.pits||B.resOn)||!B.plan||s.tick<c.resAt) return 0; const left=B.plan.filter(id=>!u.unlocked.has(id)).reduce((a,id)=>a+u.tree[id].seeds,0);
   if(u.seeds>=left) return 0; const save=c.maxTun; c.maxTun=save+c.seedTun; const r=digTo(seedCells(),'stun'); c.maxTun=save; return r>0?1:0 }
 function pits(x){ const c=B.cfg; if(!c.pits||!S().unlocks.unlocked.has('build-clay-pit')||rooms(15).length>=c.pits||pendRoom(15)) return false;
   if(x.leaves>=30&&x.fungus>=20) return place(15,(x0,y0,w,h)=>dRoyal(x0,y0,w,h));
@@ -165,9 +165,10 @@ function build(){ const s=S(), x=st(), n=castes(), t=s.tick, c=B.cfg;
       [3,fF?7:7.5,eggs>=2&&t>=c.fdAt&&clay>=1&&nls>=1&&nlc<c.lcd&&!pendRoom(43),43,lcdScore],
       [4,5,nf<c.farmMax && leaves-c.farmLeafRes>=5 && !pendRoom(3),3,farmScore],
       [5,4,nlc>=1 && clay-keep>=2 && nls<c.lsMax && !pendRoom(4),4,lsScore],
-      [5,3,nls<c.ls && clay>=2 && !pendRoom(4),4,lsScore]];
-    const L=A.filter(a=>a[2]&&o[a[0]]>-0.6).map(a=>[a[1]+3*o[a[0]],a[3],a[4]]).sort((p,q)=>q[0]-p[0]);
-    for(const [,r,f] of L) if(place(r,f)) return; return }
+      [5,3,nls<c.ls && clay>=2 && !pendRoom(4),4,lsScore],
+      [6,2,o.length>6,upgDig,null]];
+    const L=A.filter(a=>a[2]&&o[a[0]]>-0.6).map(a=>[a[1]+(a[0]===6?6:3)*o[a[0]],a[3],a[4]]).sort((p,q)=>q[0]-p[0]);
+    for(const [,r,f] of L){ if(typeof r==='function'){ const v=r(); if(v==='hold') return; if(v) return } else if(place(r,f)) return } return }
   // digger dens (eggs only)
   if(nd<c.dd && eggs>=2 && (nd===0||t>=c.ddAt) && !pendRoom(42)) { if(place(42,ddScore)) return }
   if(nls<1 && clay>=2) { if(place(4,lsScore)) return }
@@ -185,6 +186,10 @@ function build(){ const s=S(), x=st(), n=castes(), t=s.tick, c=B.cfg;
   if(nlc>=1 && clay-keep>=2 && nls<c.lsMax && !pendRoom(4)) { if(place(4,lsScore)) return }
   if(nls<c.ls && clay>=2 && !pendRoom(4)) { if(place(4,lsScore)) return }
 }
+// dig upgrades (Strong Backs, Jaw Muscles) on digger dens: one copy per den, helps only that den's diggers
+function upgDig(){ const s=S(); B.holdUp=false; let want=false; for(const k of (B.cfg.upKinds||['backs','dig'])){ if(!s.unlocks.unlocked.has('upgrades-'+k)) continue;
+  for(const d of rooms(42)){ if(!d.done) continue; const why=s.upgradeRoomRefusal(k,d.id); if(!why&&cmd({type:'upgrade-room',kind:k,id:d.id})){ log('up',k,d.id); cnt('up'+k); return true } if(why&&/^Needs \d+ brown clay/.test(why)) want=true } }
+  if(want){ B.holdUp=true; return 'hold' } return false }
 function strongDig(){ const s=S(),c=B.cfg,x=st(); if(!c.sd||s.digLevel()>=c.sd||s.tick<c.sdAt) return false;
   if(x.clay<10||x.fungus<10) return x.fungus>=5?'wait':false;
   const d=rooms(42).filter(e=>e.done&&!(e.upgrades||[]).includes('tunnel'))[0]; if(!d) return false;

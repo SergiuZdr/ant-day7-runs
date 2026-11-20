@@ -9,14 +9,17 @@ let rs=+(E.RS||Date.now()%1e9); const rnd=()=>{rs=(rs*1103515245+12345)%21474836
 const rn=()=>{let u=0;while(!u)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd())};
 const bot=fs.readFileSync(__dirname+'/c2bot.js','utf8'), nnsrc=fs.readFileSync(__dirname+'/c2pnn.js','utf8');
 const fresh=(I,H,O,s)=>({W1:Array.from({length:H},()=>Array.from({length:I+1},()=>rn()*s)),W2:Array.from({length:O},()=>Array(H+1).fill(0))});
-const SF=DIR+'/state.json';
+const SF=DIR+'/state.json'; const WO=+(E.WO||8);
+const PM=Object.fromEntries((E.PMUL||'k:1,w:1,p:1').split(',').map(x=>x.split(':')).map(([a,b])=>[a,+b]));
 let st=fs.existsSync(SF)?JSON.parse(fs.readFileSync(SF,'utf8')):{gen:0,best:null,bestScore:+(E.START_SCORE||-1),hist:[]};
 if(!st.best){ let s=E.START?JSON.parse(fs.readFileSync(E.START,'utf8')):{}; if(s.W1) s={k:s};
-  st.best={k:s.k||fresh(20,10,12,0.5),w:s.w||fresh(20,8,6,0.5),p:s.p||fresh(18,8,1,0.7)} }
+  st.best={k:s.k||fresh(20,10,12,0.5),w:s.w||fresh(20,8,WO,0.5),p:s.p||fresh(18,8,1,0.7)} }
+// grow the what-net to WO outputs (new outputs start at zero = no change)
+for(const r of [st.best.w.W2]) while(r.length<WO) r.push(Array(st.best.w.W1.length+1).fill(0));
 function mutate(n,sig){ const m=JSON.parse(JSON.stringify(n)); const parts=['k','w','p']; const r=rnd();
   const pick=r<0.25?parts:[parts[Math.floor(rnd()*3)]];   // one net at a time most of the time
-  for(const q of pick){ for(const row of m[q].W1) for(let i=0;i<row.length;i++) if(rnd()<0.15) row[i]+=rn()*sig*0.5;
-    for(const row of m[q].W2) for(let i=0;i<row.length;i++) if(rnd()<0.3) row[i]+=rn()*sig }
+  for(const q of pick){ const sg=sig*(PM[q]??1); for(const row of m[q].W1) for(let i=0;i<row.length;i++) if(rnd()<0.15) row[i]+=rn()*sg*0.5;
+    for(const row of m[q].W2) for(let i=0;i<row.length;i++) if(rnd()<0.3) row[i]+=rn()*sg }
   return m }
 async function evalNet(b,net){ const p=await page(b,SEED); try{
   await p.evaluate(`(()=>{${bot}})()`); await p.evaluate(([c,n])=>{window.__C2.cfg=Object.assign(window.__C2.cfg,c);window.__NET=n},[BASE,net]);
@@ -37,6 +40,8 @@ function onBest(s,rep,net){ const bf=DIR+`/best-${s}.json`, nf=DIR+`/net-${s}.js
     const sc=res.map(r=>r.s); const bi=sc.indexOf(Math.max(...sc));
     if(sc[bi]>st.bestScore){ st.best=cands[bi]; st.bestScore=sc[bi]; onBest(sc[bi],res[bi].rep,cands[bi]) }
     st.hist.push([st.gen,st.bestScore,sc]); fs.writeFileSync(SF,JSON.stringify(st));
-    console.log(new Date().toISOString().slice(11,19),'gen',st.gen,'best',st.bestScore,'scores',sc.join(' '),((Date.now()-t0)/60000).toFixed(1)+'min');
+    const line=[new Date().toISOString().slice(11,19),'gen',st.gen,'best',st.bestScore,'scores',sc.join(' '),((Date.now()-t0)/60000).toFixed(1)+'min'].join(' ');
+    console.log(line);
+    if(E.ONGEN) try{ cp.execSync(E.ONGEN,{env:{...E,LINE:line},stdio:'inherit',timeout:120000}) }catch(e){ console.log('ongen failed',String(e).slice(0,200)) }
     if(st.gen%5===4){ await b.close(); b=await browser() } }
   await b.close() })();

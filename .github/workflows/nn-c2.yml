@@ -10,7 +10,8 @@ on:
       jobs: { description: 'Parallel islands (max 20)', default: '20' }
       par: { description: 'Games in parallel per job', default: '4' }
       pop: { description: 'Candidates per generation', default: '8' }
-      minutes: { description: 'Training minutes per job', default: '330' }
+      minutes: { description: 'Training minutes per job', default: '300' }
+      pmul: { description: 'Mutation size per net (k knobs, w what, p where)', default: 'k:1,w:0.4,p:0.4' }
 
 permissions:
   contents: write
@@ -56,9 +57,11 @@ jobs:
           MAXMIN: ${{ inputs.minutes }}
           DIR: ../out/job-${{ matrix.job }}
           ONBEST: ./pushbest.sh
+          ONGEN: ./progress.sh
+          PMUL: ${{ inputs.pmul }}
         run: |
           # islands use different mutation sizes
-          SIGS=(0.03 0.05 0.08 0.12 0.2)
+          SIGS=(0.02 0.04 0.06 0.08 0.12)
           export SIG=${SIGS[$(( (JOB-1) % 5 ))]}
           echo "sigma $SIG"
           node es2.js
