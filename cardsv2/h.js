@@ -2,7 +2,8 @@
 const pw=require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const URL=process.env.GAME_URL||'https://ants2-cards-v2.pages.dev/';
-async function browser(){return pw.chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'})}
+const CH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+async function browser(){const o={headless:true};if(process.env.CHROME!=='bundled'&&require('fs').existsSync(CH))o.executablePath=CH;return pw.chromium.launch(o)}
 async function page(b,seed){
  const ctx=await b.newContext({viewport:{width:1400,height:900}});const p=await ctx.newPage();
  await p.addInitScript(()=>{const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>setTimeout(()=>raf(cb),2000);

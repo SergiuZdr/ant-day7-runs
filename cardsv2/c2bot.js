@@ -53,7 +53,7 @@ const reach=(ra,ax,ay,rb,bx,by)=>{ const [wa,ha]=SZ[ra],[wb,hb]=SZ[rb]; return M
 const touches=(room,x,y,w,h)=>{ const g=G(),s=S(); for(let i=y-1;i<=y+h;i++) for(let j=x-1;j<=x+w;j++){ if(!((j>=x&&j<x+w)||(i>=y&&i<y+h))) continue; if((j>=x&&j<x+w)&&(i>=y&&i<y+h)) continue; if(j<0||i<0||j>=V||i>=Y) continue; const v=g[i*V+j]; if(v>=0&&s.elems[v].room===room&&!s.elems[v].fill) return true } return false };
 function place(room,scoreFn){ const [w,h]=SZ[room]; const c=[];
   for(let y=0;y+h<=Y;y++) for(let x=0;x+w<=V;x++){ if(!freeR(x,y,w,h)||!covered(x,y,w,h)||!diggable(x,y,w,h)) continue;
-    const sc=scoreFn(x,y,w,h); if(sc!=null) c.push([sc,x,y]) }
+    let sc=scoreFn(x,y,w,h); if(sc!=null&&B.padj) sc=B.padj(room,x,y,w,h,sc); if(sc!=null) c.push([sc,x,y]) }
   c.sort((a,b)=>a[0]-b[0]); let tries=0; if(!c.length){ B.nocand=B.nocand||{}; B.nocand[room]=S().tick }
   for(const [,x,y] of c){ const key=room+':'+x+':'+y, f=B.fc.get(key); if(f&&S().tick-f<3000) continue;
     const p=S().planRoom(room,x,y,false); if(!p.ok){ B.why=B.why||{}; const wk=room+':'+String(p.reason).slice(0,40); B.why[wk]=(B.why[wk]||0)+1; if(!/^Needs/.test(p.reason)) B.fc.set(key,S().tick); if(++tries>25) break; continue }
@@ -95,7 +95,8 @@ const lsScore=(x,y,w,h)=>dRoyal(x,y,w,h)+(rooms(43).length&&inGroupReach(43,4,x,
 const lcdScore=(x,y,w,h)=>{ const n=rooms(43).length; if(n&&!touches(43,x,y,w,h)) return null; const ls=rooms(4).filter(e=>{const [ex,ey]=ctr(e);return reach(43,x+w/2,y+h/2,4,ex,ey)}).length; return dRoyal(x,y,w,h)-ls*2-newCover(43,4,x,y,w,h)*B.cfg.covW*0.5 };
 // farmer den chain: first near royal (offset), then touching the chain, prefer horizontal growth near royal row
 // free diggable covered cells within reach of a den at (x,y) that no den of that type reaches yet (farm-sized targets)
-function newCover(den,src,x,y,w,h){ const s=S(),g=G(),P=s.pheromones,L=s.digLevel(); const [sw,sh]=SZ[src]; const cx=x+w/2,cy=y+h/2;
+function newCover(den,src,x,y,w,h){ const mk=den+':'+x+':'+y; if(B.ncT!==S().tick||B.ncN!==S().nest.works.length){B.ncT=S().tick;B.ncN=S().nest.works.length;B.nc=new Map()} const mv=B.nc.get(mk); if(mv!==undefined) return mv; const r=newCover0(den,src,x,y,w,h); B.nc.set(mk,r); return r }
+function newCover0(den,src,x,y,w,h){ const s=S(),g=G(),P=s.pheromones,L=s.digLevel(); const [sw,sh]=SZ[src]; const cx=x+w/2,cy=y+h/2;
   const ex=rooms(den).map(ctr); let k=0;
   const rx=Math.ceil((w+sw)/2+5), ry=Math.ceil((h+sh)/2+5);
   for(let yy=Math.max(0,Math.floor(cy-ry));yy<Math.min(Y,cy+ry);yy++) for(let xx=Math.max(0,Math.floor(cx-rx));xx<Math.min(V,cx+rx);xx++){
@@ -157,6 +158,16 @@ function build(){ const s=S(), x=st(), n=castes(), t=s.tick, c=B.cfg;
   if(c.ovf>=2&&overflow(x)) return;
   if(pend>=c.maxPend){ if(!overflow(x)) return; return }
   const nd=rooms(42).length, nls=rooms(4).length, nlc=rooms(43).length, nf=rooms(3).length, nfd=rooms(44).length;
+  if(B.wadj){ const o=B.wadj(); const gF=(2+nf)*c.fW, gL=(2+nls)*c.lW, keep=eggs>=1?c.keepClay:0; const fF=gF>=gL;
+    const A=[[0,10,nd<c.dd && eggs>=2 && (nd===0||t>=c.ddAt) && !pendRoom(42),42,ddScore],
+      [1,9,nls<1 && clay>=2,4,lsScore],
+      [2,fF?7.5:7,eggs>=2&&t>=c.fdAt&&clay>=2&&nfd<c.fd&&!pendRoom(44),44,fdScore],
+      [3,fF?7:7.5,eggs>=2&&t>=c.fdAt&&clay>=1&&nls>=1&&nlc<c.lcd&&!pendRoom(43),43,lcdScore],
+      [4,5,nf<c.farmMax && leaves-c.farmLeafRes>=5 && !pendRoom(3),3,farmScore],
+      [5,4,nlc>=1 && clay-keep>=2 && nls<c.lsMax && !pendRoom(4),4,lsScore],
+      [5,3,nls<c.ls && clay>=2 && !pendRoom(4),4,lsScore]];
+    const L=A.filter(a=>a[2]&&o[a[0]]>-0.6).map(a=>[a[1]+3*o[a[0]],a[3],a[4]]).sort((p,q)=>q[0]-p[0]);
+    for(const [,r,f] of L) if(place(r,f)) return; return }
   // digger dens (eggs only)
   if(nd<c.dd && eggs>=2 && (nd===0||t>=c.ddAt) && !pendRoom(42)) { if(place(42,ddScore)) return }
   if(nls<1 && clay>=2) { if(place(4,lsScore)) return }

@@ -1,0 +1,70 @@
+name: nn-c2
+# Cards v2 test build: train the c2pnn nets (knobs + what to build + where to place).
+# Each job is one island; every new best is uploaded to the c2-results branch at once.
+on:
+  workflow_dispatch:
+    inputs:
+      seed: { description: 'Map seed', default: '55917' }
+      start: { description: 'Start net in cardsv2/', default: 'start-4563.json' }
+      start_score: { description: 'Score of the start net (skip its eval when >0)', default: '4563' }
+      jobs: { description: 'Parallel islands (max 20)', default: '20' }
+      par: { description: 'Games in parallel per job', default: '4' }
+      pop: { description: 'Candidates per generation', default: '8' }
+      minutes: { description: 'Training minutes per job', default: '330' }
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          n=$(( ${{ inputs.jobs }} > 20 ? 20 : ${{ inputs.jobs }} ))
+          echo "matrix=$(seq -s, 1 $n | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+
+  train:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Train (one island)
+        working-directory: cardsv2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROME: bundled
+          SEED: ${{ inputs.seed }}
+          START: ${{ inputs.start }}
+          START_SCORE: ${{ inputs.start_score }}
+          JOB: ${{ matrix.job }}
+          RUN_TAG: run${{ github.run_number }}
+          RS: ${{ matrix.job }}${{ github.run_number }}3
+          CONC: ${{ inputs.par }}
+          LAMBDA: ${{ inputs.pop }}
+          MAXMIN: ${{ inputs.minutes }}
+          DIR: ../out/job-${{ matrix.job }}
+          ONBEST: ./pushbest.sh
+        run: |
+          # islands use different mutation sizes
+          SIGS=(0.03 0.05 0.08 0.12 0.2)
+          export SIG=${SIGS[$(( (JOB-1) % 5 ))]}
+          echo "sigma $SIG"
+          node es2.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: island-${{ matrix.job }}
+          path: out/
+          if-no-files-found: ignore
