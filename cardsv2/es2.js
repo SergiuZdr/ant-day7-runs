@@ -5,17 +5,19 @@ const {browser,page,sleep}=require('./h.js');const fs=require('fs');const cp=req
 const E=process.env, SEED=+(E.SEED||55917), BASE=JSON.parse(E.BASE||'{"dd":9,"maxPend":5,"maxTun":1,"lcd":6,"lsMax":8}');
 const LAMBDA=+(E.LAMBDA||8), CONC=+(E.CONC||4), DIR=E.DIR||'pn1', GENS=+(E.GENS||1000), SIG=+(E.SIG||0.08), MAXMIN=+(E.MAXMIN||1e9);
 const T0=Date.now(); fs.mkdirSync(DIR,{recursive:true});
-let rs=+(E.RS||Date.now()%1e9); const rnd=()=>{rs=(rs*1103515245+12345)%2147483648;return rs/2147483648};
+// mulberry32 (the old LCG lost precision in doubles and cycled every few generations)
+let rs=(+(E.RS||Date.now()%1e9))>>>0; const rnd=()=>{rs=(rs+0x6D2B79F5)>>>0;let t=rs;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
 const rn=()=>{let u=0;while(!u)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd())};
 const bot=fs.readFileSync(__dirname+'/c2bot.js','utf8'), nnsrc=fs.readFileSync(__dirname+'/c2pnn.js','utf8');
 const fresh=(I,H,O,s)=>({W1:Array.from({length:H},()=>Array.from({length:I+1},()=>rn()*s)),W2:Array.from({length:O},()=>Array(H+1).fill(0))});
-const SF=DIR+'/state.json'; const WO=+(E.WO||8);
+const SF=DIR+'/state.json'; const WO=+(E.WO||8), KO=+(E.KO||15);
 const PM=Object.fromEntries((E.PMUL||'k:1,w:1,p:1').split(',').map(x=>x.split(':')).map(([a,b])=>[a,+b]));
 let st=fs.existsSync(SF)?JSON.parse(fs.readFileSync(SF,'utf8')):{gen:0,best:null,bestScore:+(E.START_SCORE||-1),hist:[]};
 if(!st.best){ let s=E.START?JSON.parse(fs.readFileSync(E.START,'utf8')):{}; if(s.W1) s={k:s};
-  st.best={k:s.k||fresh(20,10,12,0.5),w:s.w||fresh(20,8,WO,0.5),p:s.p||fresh(18,8,1,0.7)} }
+  st.best={k:s.k||fresh(20,10,KO,0.5),w:s.w||fresh(20,8,WO,0.5),p:s.p||fresh(18,8,1,0.7)} }
 // grow the what-net to WO outputs (new outputs start at zero = no change)
 for(const r of [st.best.w.W2]) while(r.length<WO) r.push(Array(st.best.w.W1.length+1).fill(0));
+while(st.best.k.W2.length<KO) st.best.k.W2.push(Array(st.best.k.W1.length+1).fill(0));
 function mutate(n,sig){ const m=JSON.parse(JSON.stringify(n)); const parts=['k','w','p']; const r=rnd();
   const pick=r<0.25?parts:[parts[Math.floor(rnd()*3)]];   // one net at a time most of the time
   for(const q of pick){ const sg=sig*(PM[q]??1); for(const row of m[q].W1) for(let i=0;i<row.length;i++) if(rnd()<0.15) row[i]+=rn()*sg*0.5;

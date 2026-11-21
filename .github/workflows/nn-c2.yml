@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
     inputs:
       seed: { description: 'Map seed', default: '55917' }
+      game_url: { description: 'Game build URL', default: 'https://ants2-cards-v2.pages.dev/' }
+      base: { description: 'Bot cfg (json)', default: '{"dd":9,"maxPend":5,"maxTun":1,"lcd":6,"lsMax":8}' }
       start: { description: 'Start net in cardsv2/', default: 'start-4563.json' }
       start_score: { description: 'Score of the start net (skip its eval when >0)', default: '4563' }
       jobs: { description: 'Parallel islands (max 20)', default: '20' }
@@ -47,6 +49,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CHROME: bundled
           SEED: ${{ inputs.seed }}
+          GAME_URL: ${{ inputs.game_url }}
+          BASE: ${{ inputs.base }}
           START: ${{ inputs.start }}
           START_SCORE: ${{ inputs.start_score }}
           JOB: ${{ matrix.job }}

@@ -27,6 +27,7 @@ B.cfg=Object.assign({end:63000,
   lsMax:200,
   ovf:1, ddMax:30, phero:2,
   pendN:{}, grpPen:40, grpFarm:2, phSpace:3, phNear:0.5, holdMax:3000, pits:0, resAt:0, cards:['build-clay-pit'], fungusRes:0, seedTun:1, pitHold:0,
+  loc:0, dW:0.3, fF:3, frW:0.4, farmMinD:1, ddOut:12,
   sd:1, sdAt:6000, sdHold:1, covW:0.15, // Strong Digging levels on digger dens; hold clay for it
 },B.cfg||{});
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4],42:[3,2],43:[3,2],44:[3,2],45:[3,2],46:[3,2],47:[3,2],48:[3,2],50:[3,2],49:[2,1]};
@@ -89,10 +90,10 @@ const dRoyal=(x,y,w,h)=>{ const [rx,ry]=RC(); return Math.hypot(x+w/2-rx,(y+h/2-
 const groupOf=room=>rooms(room).map(e=>[...ctr(e)]);
 const inGroupReach=(den,room,x,y,w,h)=>{ const cx=x+w/2,cy=y+h/2; return rooms(den).some(e=>{ const [ex,ey]=ctr(e); return reach(den,ex,ey,room,cx,cy) }) };
 // digger dens: touch the royal chamber's reach, chain together
-const ddScore=(x,y,w,h)=>{ const [rx,ry]=RC(); const n=rooms(42).length; const inR=reach(42,x+w/2,y+h/2,0,rx,ry);
+const ddScoreG=(x,y,w,h)=>{ const [rx,ry]=RC(); const n=rooms(42).length; const inR=reach(42,x+w/2,y+h/2,0,rx,ry);
   if(n===0) return inR?dRoyal(x,y,w,h):null; return touches(42,x,y,w,h)?dRoyal(x,y,w,h):null };
-const lsScore=(x,y,w,h)=>dRoyal(x,y,w,h)+(rooms(43).length&&inGroupReach(43,4,x,y,w,h)?-6:0);
-const lcdScore=(x,y,w,h)=>{ const n=rooms(43).length; if(n&&!touches(43,x,y,w,h)) return null; const ls=rooms(4).filter(e=>{const [ex,ey]=ctr(e);return reach(43,x+w/2,y+h/2,4,ex,ey)}).length; return dRoyal(x,y,w,h)-ls*2-newCover(43,4,x,y,w,h)*B.cfg.covW*0.5 };
+const lsScoreG=(x,y,w,h)=>dRoyal(x,y,w,h)+(rooms(43).length&&inGroupReach(43,4,x,y,w,h)?-6:0);
+const lcdScoreG=(x,y,w,h)=>{ const n=rooms(43).length; if(n&&!touches(43,x,y,w,h)) return null; const ls=rooms(4).filter(e=>{const [ex,ey]=ctr(e);return reach(43,x+w/2,y+h/2,4,ex,ey)}).length; return dRoyal(x,y,w,h)-ls*2-newCover(43,4,x,y,w,h)*B.cfg.covW*0.5 };
 // farmer den chain: first near royal (offset), then touching the chain, prefer horizontal growth near royal row
 // free diggable covered cells within reach of a den at (x,y) that no den of that type reaches yet (farm-sized targets)
 function newCover(den,src,x,y,w,h){ const mk=den+':'+x+':'+y; if(B.ncT!==S().tick||B.ncN!==S().nest.works.length){B.ncT=S().tick;B.ncN=S().nest.works.length;B.nc=new Map()} const mv=B.nc.get(mk); if(mv!==undefined) return mv; const r=newCover0(den,src,x,y,w,h); B.nc.set(mk,r); return r }
@@ -104,11 +105,28 @@ function newCover0(den,src,x,y,w,h){ const s=S(),g=G(),P=s.pheromones,L=s.digLev
     const fx=xx+0.5, fy=yy+0.5; if(!reach(den,cx,cy,src,fx,fy)) continue;
     if(ex.some(([a,b])=>reach(den,a,b,src,fx,fy))) continue; k++ }
   return k }
-const fdScore=(x,y,w,h)=>{ const n=rooms(44).length; const d=dRoyal(x,y,w,h);
+const fdScoreG=(x,y,w,h)=>{ const n=rooms(44).length; const d=dRoyal(x,y,w,h);
   if(n===0) return d<4?null:d-newCover(44,3,x,y,w,h)*B.cfg.covW;
   const farms=rooms(3).filter(e=>{const [a,b]=ctr(e);return reach(44,x+w/2,y+h/2,3,a,b)}).length;
   if(!touches(44,x,y,w,h)) return B.cfg.grpPen<0?null:d-newCover(44,3,x,y,w,h)*B.cfg.covW-farms*B.cfg.grpFarm+B.cfg.grpPen; return d-newCover(44,3,x,y,w,h)*B.cfg.covW };
-const farmScore=(x,y,w,h)=>{ if(rooms(44).length&&!inGroupReach(44,3,x,y,w,h)) return null; return dRoyal(x,y,w,h) };
+const farmScoreG=(x,y,w,h)=>{ if(rooms(44).length&&!inGroupReach(44,3,x,y,w,h)) return null; return dRoyal(x,y,w,h) };
+
+// ---- local bonus mode (beta "Combined" build): a den counts only sources in ITS OWN reach, joined groups share upgrades.
+// cfg.loc=1 switches the placement scores to per-den counting.
+function freeIn(src,x,y,w,h){ const k='f'+src+':'+x+':'+y; if(B.ncT!==S().tick||B.ncN!==S().nest.works.length){B.ncT=S().tick;B.ncN=S().nest.works.length;B.nc=new Map()} const mv=B.nc.get(k); if(mv!==undefined) return mv;
+  const s=S(),g=G(),P=s.pheromones,L=s.digLevel(),[sw,sh]=SZ[src],cx=x+w/2,cy=y+h/2,rx=(w+sw)/2+5,ry=(h+sh)/2+5; let n=0;
+  for(let yy=Math.max(0,Math.ceil(cy-ry));yy<Math.min(Y,cy+ry);yy++) for(let xx=Math.max(0,Math.ceil(cx-rx));xx<Math.min(V,cx+rx);xx++){
+    if(xx>=x&&xx<x+w&&yy>=y&&yy<y+h) continue; if(g[yy*V+xx]!==-1||!P.contains(xx,yy)||s.cellDirt(xx,yy)>L) continue; n++ }
+  B.nc.set(k,n); return n }
+const inReach=(ra,x,y,w,h,rb)=>{ const cx=x+w/2,cy=y+h/2; let n=0; for(const e of rooms(rb)){ const [a,b]=ctr(e); if(reach(ra,cx,cy,rb,a,b)) n++ } return n };
+const cL=()=>B.cfg;
+const ddL=(x,y,w,h)=>{ const [rx,ry]=RC(); const inR=reach(42,x+w/2,y+h/2,0,rx,ry); return dRoyal(x,y,w,h)+(inR?0:cL().ddOut) };
+const fdL=(x,y,w,h)=>{ const c=cL(); return c.dW*dRoyal(x,y,w,h)-c.fF*inReach(44,x,y,w,h,3)-c.frW*freeIn(3,x,y,w,h)/9 };
+const farmL=(x,y,w,h)=>{ const c=cL(); const d=inReach(3,x,y,w,h,44); if(rooms(44).length&&d<c.farmMinD) return null; return c.dW*dRoyal(x,y,w,h)-c.fF*d };
+const lcdL=(x,y,w,h)=>{ const c=cL(); return c.dW*dRoyal(x,y,w,h)-c.fF*inReach(43,x,y,w,h,4)-c.frW*freeIn(4,x,y,w,h)/8 };
+const lsL=(x,y,w,h)=>{ const c=cL(); return c.dW*dRoyal(x,y,w,h)-c.fF*inReach(4,x,y,w,h,43) };
+const ddScore=(...a)=>B.cfg.loc?ddL(...a):ddScoreG(...a), lsScore=(...a)=>B.cfg.loc?lsL(...a):lsScoreG(...a), lcdScore=(...a)=>B.cfg.loc?lcdL(...a):lcdScoreG(...a),
+  fdScore=(...a)=>B.cfg.loc?fdL(...a):fdScoreG(...a), farmScore=(...a)=>B.cfg.loc?farmL(...a):farmScoreG(...a);
 
 // caps: never let eggs or clay sit full (each wasted egg is a lost den)
 function overflow(x){ const c=B.cfg; if(!c.ovf) return false; const s=S();

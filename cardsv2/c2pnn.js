@@ -33,7 +33,8 @@ B.pre=()=>{ F=feats(); if(W){ Wo=W(F); B.resOn=Wo.length>7&&Wo[7]>0 } if(!K) ret
   c.lsMax=o[8]<-0.5?rooms(4).length:base.lsMax;
   c.fd=o[9]<-0.5?rooms(44).length:base.fd;
   c.lcd=o[10]<-0.5?rooms(43).length:base.lcd;
-  c.farmMax=o[11]<-0.5?rooms(3).length:base.farmMax; };
+  c.farmMax=o[11]<-0.5?rooms(3).length:base.farmMax;
+  if(o.length>14){ c.fF=base.fF*Math.exp(o[12]); c.frW=base.frW*Math.exp(o[13]); c.dW=base.dW*Math.exp(o[14]) } };
 if(W) B.wadj=()=>Wo||W(F||feats());
 if(P){ const SZ={42:[3,2],43:[3,2],44:[3,2],3:[3,3],4:[4,2],6:[2,3],15:[4,2]};
   const RT=[42,43,44,3,4];
