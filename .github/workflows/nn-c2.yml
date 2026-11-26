@@ -14,6 +14,7 @@ on:
       pop: { description: 'Candidates per generation', default: '8' }
       minutes: { description: 'Training minutes per job', default: '300' }
       pmul: { description: 'Mutation size per net (k knobs, w what, p where)', default: 'k:1,w:0.4,p:0.4' }
+      bot: { description: 'Bot file in cardsv2/ (c2bot, c3bot = power board)', default: 'c2bot' }
 
 permissions:
   contents: write
@@ -63,6 +64,7 @@ jobs:
           ONBEST: ./pushbest.sh
           ONGEN: ./progress.sh
           PMUL: ${{ inputs.pmul }}
+          BOT: ${{ inputs.bot }}
         run: |
           # islands use different mutation sizes
           SIGS=(0.02 0.04 0.06 0.08 0.12)

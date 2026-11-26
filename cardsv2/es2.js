@@ -8,7 +8,7 @@ const T0=Date.now(); fs.mkdirSync(DIR,{recursive:true});
 // mulberry32 (the old LCG lost precision in doubles and cycled every few generations)
 let rs=(+(E.RS||Date.now()%1e9))>>>0; const rnd=()=>{rs=(rs+0x6D2B79F5)>>>0;let t=rs;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
 const rn=()=>{let u=0;while(!u)u=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd())};
-const bot=fs.readFileSync(__dirname+'/c2bot.js','utf8'), nnsrc=fs.readFileSync(__dirname+'/c2pnn.js','utf8');
+const bot=fs.readFileSync(__dirname+'/'+(E.BOT||'c2bot')+'.js','utf8'), nnsrc=fs.readFileSync(__dirname+'/c2pnn.js','utf8');
 const fresh=(I,H,O,s)=>({W1:Array.from({length:H},()=>Array.from({length:I+1},()=>rn()*s)),W2:Array.from({length:O},()=>Array(H+1).fill(0))});
 const SF=DIR+'/state.json'; const WO=+(E.WO||8), KO=+(E.KO||15);
 const PM=Object.fromEntries((E.PMUL||'k:1,w:1,p:1').split(',').map(x=>x.split(':')).map(([a,b])=>[a,+b]));
