@@ -154,7 +154,7 @@ function research(){ const c=B.cfg,s=S(),u=s.unlocks; if(!(c.pits||c.res||B.resO
   // queen level up to the needed group
   if(u.revealed<B.needGroup){ const pr=u.revealPrice; if(pr!=null&&u.seeds>=pr){ if(cmd({type:'reveal-seed-group'})){ log('reveal',u.revealed); cnt('reveal'); return true } } }
   // buy cards in order
-  for(const id of B.plan){ if(u.unlocked.has(id)) continue; if(u.refusal(id)===null&&cmd({type:'buy-seed-card',id})){ log('buy',id); cnt('buy'); return true } break }
+  for(const id of B.plan){ if(u.unlocked.has(id)) continue; if(u.refusal(id)===null&&cmd({type:'buy-seed-card',id})){ log('buy',id); cnt('buy'); (B.at=B.at||{})[id]=S().tick; return true } break }
   return false }
 function digSeeds(){ const c=B.cfg,s=S(),u=s.unlocks; if(!(c.pits||c.res||B.resOn)||!B.plan||s.tick<c.resAt) return 0; const left=B.plan.filter(id=>!u.unlocked.has(id)).reduce((a,id)=>a+u.tree[id].seeds,0)+[1,2,3,4].slice(u.revealed,B.needGroup).reduce((a,b)=>a+b,0);
   if(u.seeds>=left) return 0; const save=c.maxTun; c.maxTun=save+c.seedTun; const r=digTo(seedCells(),'stun'); c.maxTun=save; return r>0?1:0 }
@@ -258,5 +258,5 @@ window.__runC2=async(maxTicks)=>{ maxTicks=maxTicks??B.cfg.end; const myId=(B.ru
     if(S().tick%9000<150) log('day',st().day,{score:sc,castes:castes()});
     await new Promise(r=>setTimeout(r,0));
   } B.done=true }catch(e){ B.err=String(e)+' '+(e.stack||'').slice(0,400) } };
-window.__stC2=()=>{ const x=st(); return {power:x.power,ants:1+x.workers+x.warriors,sap:S().unlocks.seeds,revealed:S().unlocks.revealed,unl:[...S().unlocks.unlocked],waste:B.w,why:B.why,noClay:B.noClay,tick:S().tick,day:x.day,score:score(),best:B.best,end:score(),brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done,ts:B.ts} };
+window.__stC2=()=>{ const x=st(); return {ledger:x.ledger,at:B.at,power:x.power,ants:1+x.workers+x.warriors,sap:S().unlocks.seeds,revealed:S().unlocks.revealed,unl:[...S().unlocks.unlocked],waste:B.w,why:B.why,noClay:B.noClay,tick:S().tick,day:x.day,score:score(),best:B.best,end:score(),brood:x.brood,leaves:x.leaves+'/'+x.leafCapacity,clay:x.clay+'/'+x.clayCapacity,fungus:x.fungus,castes:castes(),n:B.n,cmds:B.cmds,fails:B.fails,err:B.err,done:B.done,ts:B.ts} };
 return 'c2bot loaded';

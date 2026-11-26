@@ -1,0 +1,90 @@
+name: seed-sweep
+# Runs the bot on every seed of a range and records what matters (score, fungus, leaves, Trap-Jaw time, sprouts).
+# When a range is finished it starts the next one, until `limit` or until results/STOP exists on c2-results.
+on:
+  workflow_dispatch:
+    inputs:
+      start: { description: 'First seed', default: '1' }
+      size: { description: 'Seeds per run', default: '90000' }
+      limit: { description: 'Stop chaining at this seed', default: '4294967295' }
+      jobs: { description: 'Parallel jobs (max 20)', default: '20' }
+      par: { description: 'Games in parallel per job', default: '4' }
+      maxcost: { description: 'Skip seeds whose Trap-Jaw + Sprout research costs more sap than this', default: '14' }
+      minutes: { description: 'Minutes per job', default: '330' }
+      keep: { description: 'Upload replays with at least this power', default: '168' }
+      base: { description: 'Bot cfg (json)', default: '{"lW":4,"farmMax":6,"fd":3,"lcd":200,"phero":0,"phSpace":0}' }
+      bot: { description: 'Bot file in cardsv2/', default: 'c3bot' }
+      game_url: { description: 'Game build URL', default: 'https://beta.antarchitectgame.com/' }
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency: { group: seed-sweep, cancel-in-progress: false }
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      end: ${{ steps.m.outputs.end }}
+    steps:
+      - id: m
+        run: |
+          n=$(( ${{ inputs.jobs }} > 20 ? 20 : ${{ inputs.jobs }} ))
+          echo "matrix=$(seq -s, 1 $n | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+          end=$(( ${{ inputs.start }} + ${{ inputs.size }} ))
+          lim=${{ inputs.limit }}
+          [ $end -gt $lim ] && end=$lim
+          echo "end=$end" >> "$GITHUB_OUTPUT"
+
+  sweep:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Sweep
+        working-directory: cardsv2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROME: bundled
+          GAME_URL: ${{ inputs.game_url }}
+          START: ${{ inputs.start }}
+          END: ${{ needs.plan.outputs.end }}
+          JOBS: ${{ strategy.job-total }}
+          JOB: ${{ matrix.job }}
+          CONC: ${{ inputs.par }}
+          MAXMIN: ${{ inputs.minutes }}
+          MAXCOST: ${{ inputs.maxcost }}
+          KEEP: ${{ inputs.keep }}
+          BASE: ${{ inputs.base }}
+          BOT: ${{ inputs.bot }}
+          RUN_TAG: sweep/${{ inputs.start }}
+          DIR: ../out
+        run: node sweep.js
+
+  next:
+    needs: [plan, sweep]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the next range
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          end=${{ needs.plan.outputs.end }}
+          if [ "$end" -ge "${{ inputs.limit }}" ]; then echo "reached limit"; exit 0; fi
+          if gh api "repos/${{ github.repository }}/contents/results/STOP?ref=c2-results" >/dev/null 2>&1; then echo "STOP found"; exit 0; fi
+          gh workflow run seed-sweep -R "${{ github.repository }}" --ref "${{ github.ref_name }}" \
+            -f start="$end" -f size='${{ inputs.size }}' -f limit='${{ inputs.limit }}' -f jobs='${{ inputs.jobs }}' \
+            -f par='${{ inputs.par }}' -f maxcost='${{ inputs.maxcost }}' -f minutes='${{ inputs.minutes }}' \
+            -f keep='${{ inputs.keep }}' -f base='${{ inputs.base }}' -f bot='${{ inputs.bot }}' -f game_url='${{ inputs.game_url }}'
