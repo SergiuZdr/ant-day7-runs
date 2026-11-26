@@ -25,7 +25,7 @@ B.cfg=Object.assign({end:63000,
   fW:1,lW:1,     // den gain weights
   keepClay:2,    // clay kept for the next den when an egg is near
   lsMax:200,
-  ovf:1, ddMax:30, phero:2,
+  ovf:1, ddMax:30, phero:2, phSap:2, phSapHold:0, phSapAt:6000, phSapStall:6000,
   pendN:{}, grpPen:40, grpFarm:2, phSpace:3, phNear:0.5, holdMax:3000, pits:0, resAt:0, fungusRes:0, seedTun:1, pitHold:0,
   loc:1, res:1, cards:['combat-trap-jaw'], eggSt:0, sp:0, spEnd:45000, spPend:2, spLs:6, spW:3, spHold:0, cAt:20000, cEggKeep:3, farmLeaf:0.8, cEnd:62000, cPend:3, cMinPow:0, cWaitUntil:0, cFz:0, cFall:1, cD:0.05, dW:0.3, fF:3, frW:0.4, farmMinD:1, ddOut:12,
   sd:1, sdAt:6000, sdHold:1, covW:0.15, // Strong Digging levels on digger dens; hold clay for it
@@ -178,11 +178,19 @@ function sprouts(x){ const c=B.cfg,s=S(); if(!c.sp||!s.unlocks.unlocked.has('bui
   if(ns<c.sp&&(ns===0||lsNear>=c.spLs)){ if(x.clay>=5&&x.leaves>=5) return place(17,(x0,y0,w,h)=>c.dW*dRoyal(x0,y0,w,h)-c.spW*inReach(17,x0,y0,w,h,4)-c.spW*0.5*inReach(17,x0,y0,w,h,17)-c.frW*freeIn(4,x0,y0,w,h)/8); return c.spHold?true:false }
   if(ns&&lsNear<c.spLs&&x.clay>=2){ return place(4,(x0,y0,w,h)=>c.dW*dRoyal(x0,y0,w,h)*0.3-c.spW*inReach(4,x0,y0,w,h,17)) }
   return false }
+// pheromone room toward sap outside range, when the research plan still needs sap and none is left in range
+function pheroSap(x){ const c=B.cfg,s=S(),u=s.unlocks; if(!c.phSap||!B.plan||s.tick<c.phSapAt||rooms(6).length>=c.phSap+(c.phero?0:0)||pendRoom(6)) return false;
+  const left=B.plan.filter(id=>!u.unlocked.has(id)).reduce((a,id)=>a+u.tree[id].seeds,0)+[1,2,3,4].slice(u.revealed,B.needGroup).reduce((a,b)=>a+b,0);
+  if(u.seeds>=left) return false; const P=s.pheromones,[hx,hy]=RC(); const sc=seedCells(); const inR=sc.filter(([a,b])=>P.contains(a,b)).length;
+  const got=u.seeds+[...u.unlocked].length*100+u.revealed*1000; if(B.sapG!==got){B.sapG=got;B.sapT=s.tick} const stall=s.tick-(B.sapT??s.tick)>=c.phSapStall; if(inR+u.seeds>=left&&!stall) return false; if(x.leaves<10||x.fungus<10) return c.phSapHold?true:false;
+  const pts=sc.filter(([a,b])=>!P.contains(a,b)); if(!pts.length) return false;
+  return place(6,(x0,y0,w,h)=>{ const cx=x0+1,cy=y0+1.5; let k=0; for(const [a,b] of pts) if(Math.hypot(a-cx,b-cy)<=16) k++; return k?-k+Math.hypot(cx-hx,cy-hy)*0.2:null }) }
 function build(){ const s=S(), x=st(), n=castes(), t=s.tick, c=B.cfg;
   const eggs=B.combatOn?Math.max(0,x.brood-c.cEggKeep):x.brood, clay=x.clay-c.clayRes, leaves=x.leaves;
   const pend=pendRooms().length;
   if(eggStore(x)) return;
   if(sprouts(x)) return;
+  if(pheroSap(x)) return;
   if(pheroClay(x)) return;
   if(pits(x)) return;
   if(pheroSpace(x)) return;
