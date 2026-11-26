@@ -27,7 +27,7 @@ B.cfg=Object.assign({end:63000,
   lsMax:200,
   ovf:1, ddMax:30, phero:2, phSap:2, phSapHold:0, phSapAt:6000, phSapStall:6000,
   pendN:{}, grpPen:40, grpFarm:2, phSpace:3, phNear:0.5, holdMax:3000, pits:0, resAt:0, fungusRes:0, seedTun:1, pitHold:0,
-  loc:1, res:1, cards:['combat-trap-jaw'], eggSt:0, sp:0, spEnd:45000, spPend:2, spLs:6, spW:3, spHold:0, cAt:20000, cEggKeep:3, farmLeaf:0.8, cEnd:62000, cPend:3, cMinPow:0, cWaitUntil:0, cFz:0, cFall:1, cD:0.05, dW:0.3, fF:3, frW:0.4, farmMinD:1, ddOut:12,
+  loc:1, res:1, cards:['combat-trap-jaw','build-sprout'], eggSt:0, sp:24, spEnd:60000, spPend:2, spLs:3, spW:3, spHold:0, cAt:20000, cEggKeep:3, farmLeaf:0.8, cEnd:62000, cPend:3, cMinPow:4, cWaitUntil:45000, cFz:0, cFall:1, cD:0.05, dW:0.3, fF:3, frW:0.4, farmMinD:1, ddOut:12,
   sd:1, sdAt:6000, sdHold:1, covW:0.15, // Strong Digging levels on digger dens; hold clay for it
 },B.cfg||{});
 const SZ={0:[4,2],8:[3,2],9:[4,3],10:[3,4],1:[2,2],3:[3,3],4:[4,2],7:[5,2],13:[3,3],14:[3,3],12:[2,3],5:[1,1],6:[2,3],15:[4,2],16:[4,3],17:[3,3],18:[2,4],42:[3,2],43:[3,2],44:[3,2],45:[3,2],46:[3,2],47:[3,2],48:[3,2],50:[3,2],49:[2,1],51:[2,1],52:[2,2],53:[2,2],54:[3,2]};
