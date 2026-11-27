@@ -1,4 +1,4 @@
-// bot20 = bot18 + ideas from the #1 player's 172 save (seeds-v119/TOP1-172-ANALYSIS.md), all off by default:
+// bot20 = bot18 + ideas from the #1 player's 172 save (seeds/v119/TOP1-172-ANALYSIS.md), all off by default:
 //  lcLateAt/lcLate/lcLateEnd  leafcutter share lcLate between those ticks (keeps fungus up on day 7)
 //  f1At/f1Leaf  no first farmer before this tick / leaf count (from bot19: 170 on 3377334)
 //  grid:1      houses on a 2x2 lattice packed beside the royal chamber (more +1 neighbour bonuses)

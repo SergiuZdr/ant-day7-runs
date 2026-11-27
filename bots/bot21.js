@@ -1,6 +1,6 @@
 // bot21 = bot20 + New Chamber (room 9): build it beside the farms and move the queen in (cfg.nc).
 //   ncFree:1 is an EXPERIMENT ONLY: it unlocks the card with the game's debug command (unlock-card) to measure the payoff. Never save or post those runs.
-// bot20 = bot18 + ideas from the #1 player's 172 save (seeds-v119/TOP1-172-ANALYSIS.md), all off by default:
+// bot20 = bot18 + ideas from the #1 player's 172 save (seeds/v119/TOP1-172-ANALYSIS.md), all off by default:
 //  f1At/f1Leaf  no first farmer before this tick / leaf count (from bot19: 170 on 3377334)
 //  grid:1      houses on a 2x2 lattice packed beside the royal chamber (more +1 neighbour bonuses)
 //  sprouts:N   up to N Sprout Leaf Rooms beside Leaf Storage (needs 'build-sprout' in fTargets/extraBuy); sproutFrom = houses first; sproutRes = clay kept back
